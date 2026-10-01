@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Дневник боли</title>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#090d16">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --sat: env(safe-area-inset-top, 20px);
+      --sab: env(safe-area-inset-bottom, 20px);
+    }
+
+    body {
+      background-color: #090d16;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+      padding-top: calc(var(--sat) + 12px);
+      padding-bottom: calc(var(--sab) + 90px);
+    }
+
+    /* Отключаем приближение экрана в iOS при фокусе */
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+
+    /* Убираем стрелочки у числовых полей */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .ios-card {
+      background: rgba(23, 31, 51, 0.72);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .ios-glass-bar {
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: calc(var(--sab) + 10px);
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 26px;
+      width: 26px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.1);
+      cursor: pointer;
+      margin-top: -9px;
+    }
+
+    input[type=range]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 9999px;
+      background: #1e293b;
+    }
+  </style>
+</head>
+<body class="min-h-screen px-4 max-w-md mx-auto selection:bg-indigo-500/30">
+
+  <header class="mb-5 px-1 flex items-center justify-between">
+    <div>
+      <span class="text-[11px] font-semibold tracking-wider uppercase text-indigo-400">Мониторинг симптомов</span>
+      <h1 class="text-2xl font-bold tracking-tight text-white">Дневник боли</h1>
+    </div>
+    <div class="h-9 w-9 rounded-full ios-card flex items-center justify-center text-slate-300 text-sm shadow-sm">
+      🩺
+    </div>
+  </header>
+
+  <!-- Уведомление об отправке -->
+  <div id="toast" class="fixed top-4 left-4 right-4 z-50 transform -translate-y-24 opacity-0 transition-all duration-300 pointer-events-none max-w-md mx-auto">
+    <div class="bg-emerald-500/90 backdrop-blur-md text-white text-xs font-semibold py-3 px-4 rounded-2xl shadow-xl flex items-center space-x-2 border border-emerald-400/30">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+      <span id="toastText">Запись успешно сохранена в таблицу!</span>
+    </div>
+  </div>
+
+  <form id="headacheForm" class="space-y-4">
+
+    <!-- Карточка 1: Время -->
+    <div class="ios-card rounded-2xl p-4 shadow-lg space-y-3.5">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Время приступа</h2>
+
+      <div>
+        <label class="block text-xs text-slate-300 mb-1">Начало боли</label>
+        <input type="datetime-local" id="datetime" required
+          class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500 transition">
+      </div>
+
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-xs text-slate-300">Окончание боли</label>
+          <button type="button" id="setEndNowBtn" class="text-[11px] text-indigo-400 hover:text-indigo-300 active:scale-95 transition">
+            Поставить сейчас
+          </button>
+        </div>
+        <input type="datetime-local" id="endDatetime"
+          class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500 transition">
+        <p class="text-[10px] text-slate-500 mt-1">Оставьте пустым, если голова болит прямо сейчас</p>
+      </div>
+    </div>
+
+    <!-- Карточка 2: Интенсивность -->
+    <div class="ios-card rounded-2xl p-4 shadow-lg">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Интенсивность</h2>
+        <div id="intensityBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-colors">
+          <span id="intensityVal">5</span> / 10
+        </div>
+      </div>
+
+      <input type="range" id="intensity" min="1" max="10" value="5" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+
+      <div class="flex justify-between text-[11px] font-medium text-slate-500 mt-2 px-1">
+        <span>1 фоновая</span>
+        <span>5 умеренная</span>
+        <span class="text-rose-400/80">10 нестерпимая</span>
+      </div>
+    </div>
+
+    <!-- Карточка 3: Давление и пульс -->
+    <div class="ios-card rounded-2xl p-4 shadow-lg">
+      <div class="flex justify-between items-center mb-2.5">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Артериальное давление</h2>
+        <span class="text-[10px] text-slate-500">необязательно</span>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2.5">
+        <div>
+          <label class="block text-[11px] text-slate-400 text-center mb-1">Верхнее (SYS)</label>
+          <input type="number" id="sys" placeholder="120" inputmode="numeric"
+            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl py-2.5 text-center text-white font-medium placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+        </div>
+        <div>
+          <label class="block text-[11px] text-slate-400 text-center mb-1">Нижнее (DIA)</label>
+          <input type="number" id="dia" placeholder="80" inputmode="numeric"
+            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl py-2.5 text-center text-white font-medium placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+        </div>
+        <div>
+          <label class="block text-[11px] text-slate-400 text-center mb-1">Пульс (BPM)</label>
+          <input type="number" id="pulse" placeholder="72" inputmode="numeric"
+            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl py-2.5 text-center text-white font-medium placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+        </div>
+      </div>
+    </div>
+
+    <!-- Карточка 4: Локализация и Лекарства -->
+    <div class="ios-card rounded-2xl p-4 shadow-lg space-y-3.5">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Характер и терапия</h2>
+
+      <div>
+        <label class="block text-xs text-slate-300 mb-1">Локализация и ощущения</label>
+        <input type="text" id="painType" placeholder="Пр: пульсирует висок, давит лоб" required
+          class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-300 mb-1">Принятые препараты</label>
+        <input type="text" id="medication" placeholder="Пр: Суматриптан 50 мг или «нет»" required
+          class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-300 mb-1">День цикла</label>
+        <input type="text" id="cycleDay" placeholder="Пр: 14 или «—»"
+          class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+      </div>
+    </div>
+
+    <!-- Карточка 5: Сопутствующие триггеры -->
+    <div class="ios-card rounded-2xl p-4 shadow-lg">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Факторы и симптомы</h2>
+      <div class="flex flex-wrap gap-2" id="triggerChips">
+        <button type="button" class="chip px-3 py-1.5 text-xs font-medium rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 active:scale-95 transition-all">Тошнота</button>
+        <button type="button" class="chip px-3 py-1.5 text-xs font-medium rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 active:scale-95 transition-all">Светобоязнь</button>
+        <button type="button" class="chip px-3 py-1.5 text-xs font-medium rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 active:scale-95 transition-all">Звукобоязнь</button>
+        <button type="button" class="chip px-3 py-1.5 text-xs font-medium rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 active:scale-95 transition-all">Стресс</button>
+        <button type="button" class="chip px-3 py-1.5 text-xs font-medium rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 active:scale-95 transition-all">Недосып</button>
+        <button type="button" class="chip px-3 py-1.5 text-xs font-medium rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 active:scale-95 transition-all">Аура</button>
+        <button type="button" class="chip px-3 py-1.5 text-xs font-medium rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 active:scale-95 transition-all">Погода</button>
+      </div>
+    </div>
+
+    <!-- Карточка 6: Заметки -->
+    <div class="ios-card rounded-2xl p-4 shadow-lg">
+      <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Заметки для врача</label>
+      <textarea id="notes" rows="2" placeholder="Что помогло, после чего началось..."
+        class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+    </div>
+
+    <!-- Локальный экспорт -->
+    <div class="py-2 flex items-center justify-between px-1">
+      <span class="text-xs text-slate-500">Локальная копия записей</span>
+      <button type="button" id="exportCsvBtn" class="text-xs font-semibold text-slate-400 hover:text-white transition active:scale-95">
+        Скачать CSV ↗
+      </button>
+    </div>
+
+    <!-- Закрепленная кнопка внизу экрана -->
+    <div class="fixed bottom-0 left-0 right-0 z-40 ios-glass-bar px-4 pt-3">
+      <div class="max-w-md mx-auto">
+        <button type="submit" id="submitBtn"
+          class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 font-semibold text-white rounded-2xl shadow-xl shadow-indigo-600/30 transition-all duration-150 active:scale-[0.98] flex items-center justify-center space-x-2">
+          <span>Записать приступ</span>
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <script>
+    const GOOGLE_SCRIPT_URL = "";
+
+    // Установка даты начала
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('datetime').value = now.toISOString().slice(0, 16);
+
+    // Кнопка "Поставить сейчас"
+    document.getElementById('setEndNowBtn').addEventListener('click', () => {
+      const current = new Date();
+      current.setMinutes(current.getMinutes() - current.getTimezoneOffset());
+      document.getElementById('endDatetime').value = current.toISOString().slice(0, 16);
+    });
+
+    // Слайдер интенсивности
+    const slider = document.getElementById('intensity');
+    const display = document.getElementById('intensityVal');
+    const badge = document.getElementById('intensityBadge');
+
+    function updateIntensityColor(val) {
+      display.textContent = val;
+      if (val <= 3) {
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-colors";
+      } else if (val <= 6) {
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-colors";
+      } else {
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 transition-colors";
+      }
+    }
+    slider.addEventListener('input', (e) => updateIntensityColor(e.target.value));
+
+    // Чипы факторов
+    const chips = document.querySelectorAll('.chip');
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        chip.classList.toggle('bg-indigo-600');
+        chip.classList.toggle('border-indigo-500');
+        chip.classList.toggle('text-white');
+        chip.classList.toggle('bg-slate-900/70');
+      });
+    });
+
+    // Уведомление Toast
+    function showToast(text, isError = false) {
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toastText');
+      toastText.textContent = text;
+
+      const container = toast.firstElementChild;
+      if (isError) {
+        container.className = "bg-rose-600/90 backdrop-blur-md text-white text-xs font-semibold py-3 px-4 rounded-2xl shadow-xl flex items-center space-x-2 border border-rose-400/30";
+      } else {
+        container.className = "bg-emerald-600/90 backdrop-blur-md text-white text-xs font-semibold py-3 px-4 rounded-2xl shadow-xl flex items-center space-x-2 border border-emerald-400/30";
+      }
+
+      toast.classList.remove('-translate-y-24', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.add('-translate-y-24', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 3000);
+    }
+
+    // Отправка формы
+    const form = document.getElementById('headacheForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span>Сохранение...</span>
+      `;
+
+      const selectedTriggers = Array.from(document.querySelectorAll('.chip.bg-indigo-600'))
+        .map(c => c.textContent)
+        .join(', ');
+
+      const endVal = document.getElementById('endDatetime').value;
+
+      // Форматирование давления
+      const sysVal = document.getElementById('sys').value.trim();
+      const diaVal = document.getElementById('dia').value.trim();
+      const pulseVal = document.getElementById('pulse').value.trim();
+
+      let pressureFormatted = "—";
+      if (sysVal || diaVal) {
+        pressureFormatted = `${sysVal || '?'}/${diaVal || '?'}`;
+        if (pulseVal) {
+          pressureFormatted += ` (пульс ${pulseVal})`;
+        }
+      } else if (pulseVal) {
+        pressureFormatted = `пульс ${pulseVal}`;
+      }
+
+      const entry = {
+        datetime: document.getElementById('datetime').value.replace('T', ' '),
+        endDatetime: endVal ? endVal.replace('T', ' ') : '—',
+        intensity: slider.value,
+        pressure: pressureFormatted,
+        painType: document.getElementById('painType').value,
+        medication: document.getElementById('medication').value,
+        cycleDay: document.getElementById('cycleDay').value || '—',
+        triggers: selectedTriggers || '—',
+        notes: document.getElementById('notes').value || '—'
+      };
+
+      // Локальное сохранение
+      const history = JSON.parse(localStorage.getItem('headache_logs') || '[]');
+      history.push(entry);
+      localStorage.setItem('headache_logs', JSON.stringify(history));
+
+      try {
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          await new Promise((resolve, reject) => {
+            google.script.run
+              .withSuccessHandler(resolve)
+              .withFailureHandler(reject)
+              .doPost({ postData: { contents: JSON.stringify(entry) } });
+          });
+        } else if (GOOGLE_SCRIPT_URL) {
+          await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entry)
+          });
+        }
+
+        showToast("Запись успешно сохранена!");
+        form.reset();
+        chips.forEach(c => {
+          c.classList.remove('bg-indigo-600', 'border-indigo-500', 'text-white');
+          c.classList.add('bg-slate-900/70');
+        });
+        slider.value = 5;
+        updateIntensityColor(5);
+
+        const resetDate = new Date();
+        resetDate.setMinutes(resetDate.getMinutes() - resetDate.getTimezoneOffset());
+        document.getElementById('datetime').value = resetDate.toISOString().slice(0, 16);
+
+      } catch (err) {
+        showToast("Сохранено локально в памяти телефона", true);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Записать приступ</span>`;
+      }
+    });
+
+    // Экспорт в CSV
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+      const history = JSON.parse(localStorage.getItem('headache_logs') || '[]');
+      if (history.length === 0) {
+        showToast("Пока нет записей для выгрузки", true);
+        return;
+      }
+      const headers = ["Дата начала;Дата окончания;Интенсивность;Давление;Локализация;Препараты;День цикла;Триггеры;Заметки"];
+      const rows = history.map(r =>
+        `"${r.datetime}";"${r.endDatetime || '—'}";"${r.intensity}";"${r.pressure || '—'}";"${r.painType}";"${r.medication}";"${r.cycleDay}";"${r.triggers}";"${r.notes}"`
+      );
+      const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `headache_diary_${new Date().toISOString().slice(0, 7)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
